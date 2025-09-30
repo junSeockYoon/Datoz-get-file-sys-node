@@ -167,14 +167,27 @@ async function sendToAPI(data, extractCustomerName, logger, allOrders = []) {
     // 주문자 이름 추출 및 한글 변환
     const customerName = extractCustomerName(application.StlFile);
     
+    // 작업 상태 판단
+    let jobStatus;
+    if (!job.EndTime || job.EndTime === null) {
+        // EndTime이 없으면 작업중
+        jobStatus = '작업중';
+    } else if (job.JobResult === 1) {
+        // EndTime이 있고 JobResult가 1이면 완료
+        jobStatus = '완료';
+    } else {
+        // EndTime이 있지만 JobResult가 1이 아니면 실패
+        jobStatus = '실패';
+    }
+    
     // API 요청 데이터 구성
     const payload = {
         equipmentModel: data.ModelName,
         orderer: customerName,
         workStartTime: formatDateTimeForAPI(job.StartTime),
-        workEndTime: formatDateTimeForAPI(job.EndTime),
-        totalWorkTime: convertWorkTimeToMinutes(job.WorkTime),
-        result: job.JobResult === 1 ? '완료' : '실패'
+        workEndTime: job.EndTime ? formatDateTimeForAPI(job.EndTime) : null,
+        totalWorkTime: job.EndTime ? convertWorkTimeToMinutes(job.WorkTime) : null,
+        result: jobStatus
     };
     
     // 오류가 있으면 추가
