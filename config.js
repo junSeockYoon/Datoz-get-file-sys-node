@@ -1,6 +1,7 @@
 module.exports = {
     // 모니터링할 대상 디렉토리 - 여기만 수정하면 됩니다!
     targetDirectory: 'C:/Users/yoon/Desktop/log/job_log',
+    targetDirectory2: 'C:/Users/yoon/Desktop/log-xml/',
     
     // API 설정
     apiListUrl: 'http://localhost:9090/api/order/external/list',     // 주문 리스트 조회 (GET)

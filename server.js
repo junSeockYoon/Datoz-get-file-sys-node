@@ -3,6 +3,7 @@ const path = require('path');
 const config = require('./config');
 const iconv = require('iconv-lite');
 const { sendToAPI, getInitialCompletedOrders } = require('./apiService');
+const { processXmlFolders } = require('./xmlProcessor');
 const logger = require('./logger');
 
 // 한글 인코딩 변환 함수
@@ -270,6 +271,41 @@ async function processJsonFiles() {
             console.log(`⚠️  오류 로그: logs/errors/error_${new Date().toISOString().split('T')[0]}.txt`);
         }
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+        
+        // XML 처리 (기기 2)
+        logger.blank();
+        logger.blank();
+        const xmlResult = await processXmlFolders(allOrders);
+        
+        // 최종 결과 통합
+        if (xmlResult.stats) {
+            const totalCreated = createdCount + xmlResult.stats.created;
+            const totalUpdated = updatedCount + xmlResult.stats.updated;
+            const totalSkipped = skippedCount + xmlResult.stats.skipped;
+            const totalFailed = failCount + xmlResult.stats.failed;
+            const totalFiles = jsonFiles.length + (xmlResult.stats.created + xmlResult.stats.updated + xmlResult.stats.skipped + xmlResult.stats.failed);
+            
+            // 통합 최종 요약 (콘솔)
+            console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📊 전체 처리 완료! (JSON + XML)`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`✅ 신규 생성: ${totalCreated}건 (JSON: ${createdCount}, XML: ${xmlResult.stats.created})`);
+            console.log(`🔄 업데이트: ${totalUpdated}건 (JSON: ${updatedCount}, XML: ${xmlResult.stats.updated})`);
+            console.log(`⏭️  건너뜀: ${totalSkipped}건 (JSON: ${skippedCount}, XML: ${xmlResult.stats.skipped})`);
+            console.log(`❌ 실패: ${totalFailed}건 (JSON: ${failCount}, XML: ${xmlResult.stats.failed})`);
+            console.log(`📁 총 항목: ${totalFiles}개`);
+            
+            const finalAllOrders = xmlResult.allOrders || allOrders;
+            const finalCompleted3 = finalAllOrders.filter(o => o.result === '완료').length;
+            const finalWorking3 = finalAllOrders.filter(o => o.result === '작업중').length;
+            console.log(`📋 DB: 완료 ${finalCompleted3}건, 작업중 ${finalWorking3}건 (전체 ${finalAllOrders.length}건)`);
+            
+            if (totalSkipped > 0) {
+                const savedTime = Math.floor(totalSkipped * 0.5);
+                console.log(`⚡ 절약된 시간: 약 ${savedTime}초`);
+            }
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+        }
         
     } catch (error) {
         logger.error(`디렉토리 읽기 실패: ${error.message}`);
