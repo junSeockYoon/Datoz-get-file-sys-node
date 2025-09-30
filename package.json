@@ -1,0 +1,27 @@
+{
+  "name": "file-system-checker",
+  "version": "1.0.0",
+  "description": "폴더 내 파일 존재 여부 확인 및 파일 정보 조회 모듈",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "iconv-lite": "^0.7.0",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "keywords": [
+    "express",
+    "file-system",
+    "file-checker"
+  ],
+  "author": "yoon",
+  "license": "MIT"
+}
