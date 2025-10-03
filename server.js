@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const iconv = require('iconv-lite');
-const { sendToAPI, getInitialCompletedOrders } = require('./apiService');
+const { sendToAPI, getInitialCompletedOrders, checkApiHealth } = require('./apiService');
 const logger = require('./logger');
 
 // 한글 인코딩 변환 함수
@@ -129,6 +129,9 @@ async function processJsonFiles() {
     logger.info(`🔍 스캔 디렉토리: ${targetDir}`);
     logger.info(`📝 로그 파일: ${logger.getCurrentLogFile()}`);
     logger.separator('═', 60);
+    
+    // API 연결 상태 확인
+    const apiHealthResults = await checkApiHealth(logger);
     
     // 초기 주문 리스트 가져오기 (GET API 사용)
     logger.blank();

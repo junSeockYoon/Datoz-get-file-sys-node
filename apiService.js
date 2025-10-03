@@ -1,14 +1,209 @@
 const axios = require('axios');
 const config = require('./config');
 
+// API 연결 상태 확인 함수
+async function checkApiHealth(logger) {
+    const healthCheckResults = {
+        listApi: { status: 'unknown', responseTime: 0, error: null },
+        createApi: { status: 'unknown', responseTime: 0, error: null },
+        updateApi: { status: 'unknown', responseTime: 0, error: null }
+    };
+    
+    logger.blank();
+    logger.separator('═', 60);
+    logger.title('🔍 API 연결 상태 확인');
+    logger.blank();
+    
+    // 1. LIST API 확인
+    try {
+        logger.info('📋 LIST API 확인 중...');
+        const startTime = Date.now();
+        
+        const response = await axios.get(config.apiListUrl, {
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
+            }
+        });
+        
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.listApi = {
+            status: 'success',
+            responseTime: responseTime,
+            statusCode: response.status,
+            dataCount: response.data?.data?.length || 0
+        };
+        
+        logger.success(`✅ LIST API: 연결 성공 (${responseTime}ms)`);
+        logger.info(`   📊 응답: ${response.status} | 데이터: ${healthCheckResults.listApi.dataCount}건`);
+        
+    } catch (error) {
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.listApi = {
+            status: 'error',
+            responseTime: responseTime,
+            error: error.message,
+            statusCode: error.response?.status || 'N/A'
+        };
+        
+        logger.error(`❌ LIST API: 연결 실패 (${responseTime}ms)`);
+        logger.error(`   🔍 오류: ${error.message}`);
+        if (error.response) {
+            logger.error(`   📊 상태코드: ${error.response.status}`);
+        }
+    }
+    
+    // 2. CREATE API 확인 (테스트 요청)
+    try {
+        logger.info('📝 CREATE API 확인 중...');
+        const startTime = Date.now();
+        
+        // 테스트용 더미 데이터
+        const testPayload = {
+            equipmentModel: 'TEST-DWX-52D',
+            orderer: 'API_HEALTH_CHECK',
+            workStartTime: '2025-01-01 00:00:00',
+            workEndTime: null,
+            totalWorkTime: null,
+            result: '작업중'
+        };
+        
+        const response = await axios.post(config.apiUrl, testPayload, {
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
+            }
+        });
+        
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.createApi = {
+            status: 'success',
+            responseTime: responseTime,
+            statusCode: response.status
+        };
+        
+        logger.success(`✅ CREATE API: 연결 성공 (${responseTime}ms)`);
+        logger.info(`   📊 응답: ${response.status}`);
+        
+    } catch (error) {
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.createApi = {
+            status: 'error',
+            responseTime: responseTime,
+            error: error.message,
+            statusCode: error.response?.status || 'N/A'
+        };
+        
+        logger.error(`❌ CREATE API: 연결 실패 (${responseTime}ms)`);
+        logger.error(`   🔍 오류: ${error.message}`);
+        if (error.response) {
+            logger.error(`   📊 상태코드: ${error.response.status}`);
+        }
+    }
+    
+    // 3. UPDATE API 확인 (테스트 요청)
+    try {
+        logger.info('🔄 UPDATE API 확인 중...');
+        const startTime = Date.now();
+        
+        // 테스트용 더미 데이터
+        const testUpdatePayload = {
+            orderer: 'API_HEALTH_CHECK',
+            workStartTime: '2025-01-01 00:00:00',
+            result: '완료',
+            workEndTime: '2025-01-01 01:00:00',
+            totalWorkTime: 60
+        };
+        
+        const response = await axios.post(config.apiUpdateUrl, testUpdatePayload, {
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
+            }
+        });
+        
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.updateApi = {
+            status: 'success',
+            responseTime: responseTime,
+            statusCode: response.status
+        };
+        
+        logger.success(`✅ UPDATE API: 연결 성공 (${responseTime}ms)`);
+        logger.info(`   📊 응답: ${response.status}`);
+        
+    } catch (error) {
+        const responseTime = Date.now() - startTime;
+        healthCheckResults.updateApi = {
+            status: 'error',
+            responseTime: responseTime,
+            error: error.message,
+            statusCode: error.response?.status || 'N/A'
+        };
+        
+        logger.error(`❌ UPDATE API: 연결 실패 (${responseTime}ms)`);
+        logger.error(`   🔍 오류: ${error.message}`);
+        if (error.response) {
+            logger.error(`   📊 상태코드: ${error.response.status}`);
+        }
+    }
+    
+    // 4. API 상태 요약
+    logger.blank();
+    logger.section('📊 API 상태 요약');
+    
+    const successCount = Object.values(healthCheckResults).filter(r => r.status === 'success').length;
+    const errorCount = Object.values(healthCheckResults).filter(r => r.status === 'error').length;
+    
+    if (successCount === 3) {
+        logger.success(`✅ 모든 API 연결 정상 (3/3)`);
+        logger.info(`   📈 평균 응답시간: ${Math.round((healthCheckResults.listApi.responseTime + healthCheckResults.createApi.responseTime + healthCheckResults.updateApi.responseTime) / 3)}ms`);
+    } else if (successCount > 0) {
+        logger.warn(`⚠️  부분 연결 (${successCount}/3 성공)`);
+        logger.error(`❌ 실패: ${errorCount}개 API`);
+    } else {
+        logger.error(`❌ 모든 API 연결 실패 (0/3)`);
+        logger.warn(`   🔧 네트워크 연결 및 서버 상태를 확인하세요`);
+    }
+    
+    // 각 API별 상세 상태
+    logger.info('│');
+    logger.info('│  📋 상세 상태:');
+    Object.entries(healthCheckResults).forEach(([apiName, result]) => {
+        const statusIcon = result.status === 'success' ? '✅' : '❌';
+        const apiDisplayName = apiName === 'listApi' ? 'LIST' : apiName === 'createApi' ? 'CREATE' : 'UPDATE';
+        logger.info(`│     ${statusIcon} ${apiDisplayName}: ${result.responseTime}ms ${result.statusCode ? `(${result.statusCode})` : ''}`);
+    });
+    
+    logger.sectionEnd();
+    logger.separator('═', 60);
+    logger.blank();
+    
+    return healthCheckResults;
+}
+
 // 초기 주문 리스트 가져오기 (GET API 사용)
 async function getInitialCompletedOrders(logger) {
     try {
         logger.info('🔍 전체 주문 목록 조회 중...');
         logger.info(`   API: ${config.apiListUrl}`);
         
+        // 응답 시간 측정 시작
+        const startTime = Date.now();
+        
         // GET API로 전체 주문 목록 조회
-        const response = await axios.get(config.apiListUrl);
+        const response = await axios.get(config.apiListUrl, {
+            timeout: 15000,
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
+            }
+        });
+        
+        const responseTime = Date.now() - startTime;
         
         if (!response.data.success) {
             logger.warn('주문 목록 조회 실패');
@@ -21,7 +216,7 @@ async function getInitialCompletedOrders(logger) {
         const completedOrders = allOrders.filter(o => o.result === '완료');
         const workingOrders = allOrders.filter(o => o.result === '작업중');
         
-        logger.success(`전체 주문 ${allOrders.length}건 조회 완료`);
+        logger.success(`전체 주문 ${allOrders.length}건 조회 완료 (${responseTime}ms)`);
         logger.info(`   📊 완료: ${completedOrders.length}건, 작업중: ${workingOrders.length}건`);
         
         // 작업중 주문 목록 표시
@@ -42,14 +237,40 @@ async function getInitialCompletedOrders(logger) {
         return { success: true, allOrders: sortedOrders };
         
     } catch (error) {
-        logger.error(`주문 목록 조회 실패: ${error.message}`);
+        const responseTime = Date.now() - startTime;
+        logger.error(`주문 목록 조회 실패: ${error.message} (${responseTime}ms)`);
+        
+        // 상세한 오류 정보 로깅
+        logger.error(`🔍 오류 상세 정보:`);
         
         if (error.code === 'ECONNREFUSED') {
-            logger.error(`API 서버에 연결할 수 없습니다`);
-            logger.warn(`서버가 ${config.apiListUrl}에서 실행 중인지 확인하세요`);
+            logger.error(`   📡 연결 거부: API 서버에 연결할 수 없습니다`);
+            logger.warn(`   🔧 서버가 ${config.apiListUrl}에서 실행 중인지 확인하세요`);
+            logger.warn(`   🌐 네트워크 연결 상태를 확인하세요`);
+        } else if (error.code === 'ENOTFOUND') {
+            logger.error(`   🌐 DNS 오류: 호스트를 찾을 수 없습니다`);
+            logger.warn(`   🔧 ${config.apiListUrl}의 도메인/IP가 올바른지 확인하세요`);
+        } else if (error.code === 'ETIMEDOUT') {
+            logger.error(`   ⏱️  타임아웃: 서버 응답 시간 초과 (${responseTime}ms)`);
+            logger.warn(`   🔧 서버가 과부하 상태이거나 네트워크가 느릴 수 있습니다`);
         } else if (error.response) {
-            logger.error(`상태 코드: ${error.response.status}`);
-            logger.error(`응답: ${JSON.stringify(error.response.data)}`);
+            logger.error(`   📊 HTTP 상태 코드: ${error.response.status}`);
+            logger.error(`   📋 응답 헤더: ${JSON.stringify(error.response.headers)}`);
+            logger.error(`   📄 응답 본문: ${JSON.stringify(error.response.data)}`);
+            
+            // HTTP 상태 코드별 추가 정보
+            if (error.response.status === 401) {
+                logger.warn(`   🔐 인증 오류: API 키나 인증 정보를 확인하세요`);
+            } else if (error.response.status === 403) {
+                logger.warn(`   🚫 권한 오류: 해당 API에 접근 권한이 없습니다`);
+            } else if (error.response.status === 404) {
+                logger.warn(`   🔍 API 엔드포인트를 찾을 수 없습니다`);
+            } else if (error.response.status >= 500) {
+                logger.warn(`   🔧 서버 내부 오류: API 서버에 문제가 있습니다`);
+            }
+        } else {
+            logger.error(`   🔍 기타 오류: ${error.message}`);
+            logger.error(`   📋 오류 코드: ${error.code || 'N/A'}`);
         }
         
         logger.warn('빈 상태로 시작합니다 (중복 체크 불가)');
@@ -133,13 +354,20 @@ async function updateOrder(customerName, workStartTime, payload, logger) {
         logger.info('│');
         logger.info('│  🔄 UPDATE API 요청 중...');
         
+        // 응답 시간 측정 시작
+        const startTime = Date.now();
+        
         const response = await axios.post(config.apiUpdateUrl, updatePayload, {
+            timeout: 15000,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
             }
         });
         
-        logger.success(`업데이트 성공: ${response.data.message || 'OK'}`);
+        const responseTime = Date.now() - startTime;
+        
+        logger.success(`업데이트 성공: ${response.data.message || 'OK'} (${responseTime}ms)`);
         if (response.data.data && response.data.data.orderCode) {
             logger.item('주문 코드', response.data.data.orderCode);
         }
@@ -266,13 +494,20 @@ async function sendToAPI(data, extractCustomerName, logger, allOrders = []) {
         logger.info('│');
         logger.info('│  🚀 CREATE API 요청 중...');
         
+        // 응답 시간 측정 시작
+        const startTime = Date.now();
+        
         const response = await axios.post(config.apiUrl, payload, {
+            timeout: 15000,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'DWX-52D-LogProcessor/1.0'
             }
         });
         
-        logger.success(`API 전송 성공: ${response.data.message || 'OK'}`);
+        const responseTime = Date.now() - startTime;
+        
+        logger.success(`API 전송 성공: ${response.data.message || 'OK'} (${responseTime}ms)`);
         
         // 응답에서 새 주문 정보 추출
         const newOrder = response.data.data;
@@ -327,5 +562,6 @@ module.exports = {
     getInitialCompletedOrders,
     findExistingOrder,
     formatDateTimeForAPI,
-    convertWorkTimeToMinutes
+    convertWorkTimeToMinutes,
+    checkApiHealth
 };
