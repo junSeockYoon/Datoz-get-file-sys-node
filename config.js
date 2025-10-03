@@ -1,7 +1,7 @@
 module.exports = {
     // 모니터링할 대상 디렉토리 - 여기만 수정하면 됩니다!
-    targetDirectory: 'C:/Users/yoon/Desktop/log/job_log',
-    targetDirectory2: 'C:/Users/yoon/Desktop/log-xml/',
+    targetDirectory: '/home/datoz/Public/shared',
+    targetDirectory2: '/home/datoz/Public/shared-old',
     
     // API 설정
     apiListUrl: 'http://43.200.154.128/api/order/external/list',     // 주문 리스트 조회 (GET)
