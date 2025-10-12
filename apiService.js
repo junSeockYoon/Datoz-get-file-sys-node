@@ -279,16 +279,30 @@ async function getInitialCompletedOrders(logger) {
 }
 
 // 기존 주문 찾기 (주문자 + 작업시작일로)
-function findExistingOrder(customerName, workStartTime, allOrders) {
+function findExistingOrder(customerName, workStartTime, allOrders, logger = null) {
     if (!allOrders || allOrders.length === 0) {
         return null;
     }
     
-    // workStartTime을 Date 객체로 변환 (UTC 고려)
-    const fileTime = new Date(workStartTime);
+    // workStartTime은 한국 시간 문자열 (예: "2025-07-08 16:49:56")
+    // DB에서 받은 시간도 한국 시간으로 해석해서 비교
+    const workStartTimeISO = workStartTime.includes('T') 
+        ? workStartTime 
+        : workStartTime.replace(' ', 'T');
+    const fileTime = new Date(workStartTimeISO);
+    
+    if (logger) {
+        logger.debug(`🔍 중복 체크 시작:`);
+        logger.debug(`   파일 주문자: ${customerName}`);
+        logger.debug(`   파일 시간(문자열): ${workStartTime}`);
+        logger.debug(`   파일 시간(ISO): ${workStartTimeISO}`);
+        logger.debug(`   파일 시간(Date): ${fileTime.toString()}`);
+        logger.debug(`   파일 시간(타임스탬프): ${fileTime.getTime()}`);
+        logger.debug(`   DB 주문 수: ${allOrders.length}건`);
+    }
     
     // 주문자 이름과 작업 시작 시간으로 검색
-    return allOrders.find(order => {
+    const found = allOrders.find((order, index) => {
         const isSameOrderer = order.orderer === customerName;
         
         if (!isSameOrderer) return false;
@@ -299,16 +313,43 @@ function findExistingOrder(customerName, workStartTime, allOrders) {
         // 시간 차이 계산 (밀리초)
         const timeDiff = Math.abs(fileTime.getTime() - dbTime.getTime());
         
-        // 1분(60000ms) 이내면 같은 주문으로 판단
-        const isSameTime = timeDiff < 60000;
+        // 1분(60000ms) 이내 또는 정확히 9시간 차이(시간대 문제)면 같은 주문으로 판단
+        const isExactlyOneHour = timeDiff === 3600000;  // 정확히 1시간 (DST 등)
+        const isExactly9Hours = timeDiff === 32400000;  // 정확히 9시간 (KST-UTC)
+        const isSameTime = timeDiff < 60000 || isExactly9Hours || isExactlyOneHour;
+        
+        if (logger && isSameOrderer) {
+            logger.debug(`   [${index}] DB 주문자: ${order.orderer}`);
+            logger.debug(`       DB 시간(문자열): ${order.workStartTime}`);
+            logger.debug(`       DB 시간(Date): ${dbTime.toString()}`);
+            logger.debug(`       DB 시간(타임스탬프): ${dbTime.getTime()}`);
+            logger.debug(`       시간 차이: ${timeDiff}ms (${(timeDiff / 1000).toFixed(1)}초)`);
+            if (isExactly9Hours) {
+                logger.debug(`       → 9시간 차이 (시간대 불일치) ✅`);
+            } else if (isExactlyOneHour) {
+                logger.debug(`       → 1시간 차이 (DST) ✅`);
+            }
+            logger.debug(`       매칭: ${isSameTime ? 'YES ✅' : 'NO ❌'}`);
+        }
         
         return isSameOrderer && isSameTime;
     });
+    
+    if (logger) {
+        logger.debug(`   결과: ${found ? '중복 발견 ✅' : '중복 없음 ❌'}`);
+    }
+    
+    return found;
 }
 
-// API 전송용 날짜 포맷팅 함수 (yyyy-MM-dd HH:mm:ss)
+// API 전송용 날짜 포맷팅 함수 (yyyy-MM-dd HH:mm:ss) - 한국 시간 그대로 사용
+// JSON 파일: "2025-07-08T16:49:56.1314638+09:00" (KST)
+// → API 전송: "2025-07-08 16:49:56" (KST 그대로)
 function formatDateTimeForAPI(dateString) {
     const date = new Date(dateString);
+    
+    // 한국 시간(KST)으로 포맷팅 (UTC+9)
+    // getUTC*를 사용하지 말고 로컬 시간 그대로 사용
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -424,13 +465,7 @@ async function sendToAPI(data, extractCustomerName, logger, allOrders = []) {
     }
     
     // 기존 주문 찾기 (completedOrders + workingOrders 합친 리스트에서)
-    const existingOrder = findExistingOrder(customerName, payload.workStartTime, allOrders);
-    
-    if (!existingOrder) {
-        logger.debug(`🔍 중복 체크: ${customerName} (${payload.workStartTime}) → 없음 (전체: ${allOrders.length}건)`);
-    } else {
-        logger.debug(`🔍 중복 체크: ${customerName} → 찾음! (상태: ${existingOrder.result})`);
-    }
+    const existingOrder = findExistingOrder(customerName, payload.workStartTime, allOrders, logger);
     
     // 케이스 1: 기존 주문이 있고 "완료" 상태면 → 건너뛰기
     if (existingOrder && existingOrder.result === '완료') {

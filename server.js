@@ -4,6 +4,7 @@ const config = require('./config');
 const iconv = require('iconv-lite');
 const { sendToAPI, getInitialCompletedOrders, checkApiHealth } = require('./apiService');
 const logger = require('./logger');
+const { processOdLogFiles } = require('./odLogProcessor');
 
 // 한글 인코딩 변환 함수
 function decodeKoreanFilename(filename) {
@@ -130,8 +131,8 @@ async function processJsonFiles() {
     logger.info(`📝 로그 파일: ${logger.getCurrentLogFile()}`);
     logger.separator('═', 60);
     
-    // API 연결 상태 확인
-    const apiHealthResults = await checkApiHealth(logger);
+    // API 연결 상태 확인 (비활성화됨 - 테스트 데이터 생성 방지)
+    // const apiHealthResults = await checkApiHealth(logger);
     
     // 초기 주문 리스트 가져오기 (GET API 사용)
     logger.blank();
@@ -280,9 +281,61 @@ async function processJsonFiles() {
     }
 }
 
+// 메인 실행 함수
+async function main() {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔧 밀링 작업 로그 처리 시스템');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    
+    // 명령줄 인자 확인
+    const args = process.argv.slice(2);
+    const mode = args[0] || 'both'; // 기본값: 'both'
+    
+    try {
+        if (mode === 'dwx' || mode === '1') {
+            // DWX-52D JSON 파일만 처리
+            console.log('📁 모드: DWX-52D JSON 파일 처리\n');
+            await processJsonFiles();
+            
+        } else if (mode === 'od' || mode === '2') {
+            // od-log 파일만 처리
+            console.log('📁 모드: od-log 파일 처리\n');
+            await processOdLogFiles();
+            
+        } else if (mode === 'both' || mode === 'all' || mode === '3') {
+            // 둘 다 처리
+            console.log('📁 모드: 모든 파일 처리 (DWX-52D + od-log)\n');
+            
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📂 1단계: DWX-52D JSON 파일 처리');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            await processJsonFiles();
+            
+            console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📂 2단계: od-log 파일 처리');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            await processOdLogFiles();
+            
+            console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('✅ 모든 처리 완료!');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            
+        } else {
+            console.log('❌ 잘못된 모드입니다.\n');
+            console.log('사용법:');
+            console.log('  node server.js          - 모든 파일 처리 (기본값)');
+            console.log('  node server.js dwx      - DWX-52D JSON 파일만 처리');
+            console.log('  node server.js od       - od-log 파일만 처리');
+            console.log('  node server.js both     - 모든 파일 처리\n');
+            process.exit(1);
+        }
+        
+    } catch (error) {
+        logger.error(`프로그램 실행 중 오류 발생: ${error.message}`);
+        console.error('❌ 프로그램 실행 중 오류 발생:', error);
+        process.exit(1);
+    }
+}
+
 // 프로그램 실행
-processJsonFiles().catch(error => {
-    logger.error(`프로그램 실행 중 오류 발생: ${error.message}`);
-    console.error('프로그램 실행 중 오류 발생:', error);
-    process.exit(1);
-});
+main();

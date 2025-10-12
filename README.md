@@ -1,22 +1,30 @@
-# DWX-52D 밀링 작업 리포트 자동 전송 시스템
+# 밀링 작업 로그 자동 전송 시스템
 
-JSON 형식의 밀링 작업 로그를 읽어서 API로 자동 전송하는 프로그램입니다.
+여러 형식의 밀링 작업 로그를 읽어서 API로 자동 전송하는 프로그램입니다.
+
+## 지원 형식
+1. **DWX-52D JSON 파일**: Roland DWX-52D 장비의 JSON 작업 로그
+2. **CAMeleon CS od-log 파일**: CAMeleon CS 시스템의 날짜별 텍스트 로그
 
 ## 프로젝트 구조
 
 ```
 get-file-sys/
-├── config.js          # 설정 파일 (디렉토리 경로, API URL 등)
-├── server.js          # 메인 프로그램 (파일 읽기, 리포트 출력)
-├── apiService.js      # API 호출 전용 모듈
-├── logger.js          # 로그 파일 관리 모듈
-├── logs/              # 로그 파일 저장 디렉토리 (자동 생성)
+├── config.js              # 설정 파일 (디렉토리 경로, API URL 등)
+├── server.js              # 메인 프로그램 (파일 처리 통합)
+├── odLogProcessor.js      # od-log 파일 처리 전용 모듈
+├── apiService.js          # API 호출 전용 모듈
+├── logger.js              # 로그 파일 관리 모듈
+├── logs/                  # 로그 파일 저장 디렉토리 (자동 생성)
 │   ├── log_YYYY-MM-DD.txt     # 일별 로그 파일
 │   └── errors/                # 오류 로그 전용 폴더
 │       └── error_YYYY-MM-DD.txt  # 일별 오류 로그
-├── package.json       # 프로젝트 의존성
-├── .gitignore         # Git 제외 파일 목록
-└── README.md          # 사용 설명서
+├── run_all.bat            # 모든 파일 처리 실행 스크립트
+├── run_dwx.bat            # DWX-52D 파일만 처리 실행 스크립트
+├── run_od_log.bat         # od-log 파일만 처리 실행 스크립트
+├── package.json           # 프로젝트 의존성
+├── .gitignore             # Git 제외 파일 목록
+└── README.md              # 사용 설명서
 ```
 
 ## 주요 기능
@@ -40,12 +48,14 @@ npm install
 
 ```javascript
 module.exports = {
-    // JSON 파일이 있는 디렉토리 경로
-    targetDirectory: 'C:/Users/yoon/Desktop/log/job_log',
+    // 모니터링할 대상 디렉토리
+    targetDirectory: 'C:/Users/yoon/Desktop/log/job_log',    // DWX-52D JSON 파일
+    targetDirectory2: 'C:/Users/yoon/Desktop/od-log',        // CAMeleon CS od-log 파일
     
-    // API 엔드포인트 URL
-    apiUrl: 'http://localhost:9090/api/order/external/create',        // 주문 생성 (completedOrders 포함)
-    apiUpdateUrl: 'http://localhost:9090/api/order/external/update',  // 주문 업데이트
+    // API 설정
+    apiListUrl: 'http://localhost:9090/api/order/external/list',     // 주문 리스트 조회 (GET)
+    apiUrl: 'http://localhost:9090/api/order/external/create',       // 주문 생성 (POST)
+    apiUpdateUrl: 'http://localhost:9090/api/order/external/update', // 주문 업데이트 (POST)
     
     port: 3000,
     logLevel: 'info',
@@ -55,15 +65,44 @@ module.exports = {
 
 ### 주요 설정 항목
 
-- **targetDirectory**: JSON 파일들이 저장된 폴더 경로
-- **apiUrl**: 작업 정보를 전송할 API 엔드포인트 (생성 시 completedOrders 함께 반환)
-- **apiUpdateUrl**: 주문 업데이트 API URL (선택사항)
+- **targetDirectory**: DWX-52D JSON 파일들이 저장된 폴더 경로
+- **targetDirectory2**: CAMeleon CS od-log 파일들이 저장된 폴더 경로
+- **apiListUrl**: 주문 리스트 조회 API URL (GET)
+- **apiUrl**: 주문 생성 API URL (POST)
+- **apiUpdateUrl**: 주문 업데이트 API URL (POST)
 
 ## 실행 방법
 
+### 1. 모든 파일 처리 (기본값)
 ```bash
 node server.js
+# 또는
+node server.js both
+# 또는 배치 파일 실행
+run_all.bat
 ```
+
+### 2. DWX-52D JSON 파일만 처리
+```bash
+node server.js dwx
+# 또는 배치 파일 실행
+run_dwx.bat
+```
+
+### 3. od-log 파일만 처리
+```bash
+node server.js od
+# 또는 배치 파일 실행
+run_od_log.bat
+```
+
+### 실행 모드 비교
+
+| 모드 | 명령어 | 처리 대상 |
+|------|--------|-----------|
+| **모두** | `node server.js` 또는 `node server.js both` | DWX-52D JSON + od-log 파일 모두 |
+| **DWX** | `node server.js dwx` | DWX-52D JSON 파일만 |
+| **od-log** | `node server.js od` | CAMeleon CS od-log 파일만 |
 
 ## API 연동 방식 🔄
 
@@ -101,6 +140,7 @@ node server.js
 
 ### API 전송 데이터 형식
 
+#### DWX-52D JSON 파일
 ```json
 {
   "equipmentModel": "DWX-52D",
@@ -112,6 +152,22 @@ node server.js
   "error": null
 }
 ```
+
+#### CAMeleon CS od-log 파일
+```json
+{
+  "equipmentModel": "CAMeleon CS",
+  "orderer": "작업파일명.nc",
+  "workStartTime": "2019-03-27 09:14:36",
+  "workEndTime": "2019-03-27 10:08:23",
+  "totalWorkTime": 54,
+  "result": "완료"
+}
+```
+
+**주요 차이점:**
+- DWX-52D: 주문자가 STL 파일명에서 추출된 이름
+- od-log: 주문자가 작업 파일명(.nc 파일)으로 설정됨
 
 ### API 응답 구조 (필수!)
 
