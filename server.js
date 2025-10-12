@@ -149,13 +149,24 @@ async function processJsonFiles() {
         
         // JSON 파일 필터링 + 날짜 필터링
         const allJsonFiles = items.filter(item => item.endsWith('.json'));
+        logger.info(`📊 전체 JSON 파일: ${allJsonFiles.length}개 발견`);
+        
         const jsonFiles = allJsonFiles.filter(filename => {
             try {
                 const filePath = path.join(targetDir, filename);
                 const stats = fs.statSync(filePath);
                 // 파일 생성 시간(birthtime) 또는 수정 시간(mtime) 중 더 최근 것 사용
                 const fileDate = stats.birthtime > stats.mtime ? stats.birthtime : stats.mtime;
-                return fileDate >= filterDate;
+                const isIncluded = fileDate >= filterDate;
+                
+                logger.debug(`📄 ${filename}:`);
+                logger.debug(`   생성일: ${stats.birthtime.toISOString()}`);
+                logger.debug(`   수정일: ${stats.mtime.toISOString()}`);
+                logger.debug(`   사용일: ${fileDate.toISOString()}`);
+                logger.debug(`   필터: ${filterDate.toISOString()}`);
+                logger.debug(`   결과: ${isIncluded ? '✅ 포함' : '❌ 제외'}`);
+                
+                return isIncluded;
             } catch (error) {
                 logger.warn(`파일 정보 확인 실패: ${filename} - 필터에서 제외`);
                 return false; // 오류 시 제외 (안전한 처리)

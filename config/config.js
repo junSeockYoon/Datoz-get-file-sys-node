@@ -12,7 +12,7 @@ module.exports = {
     port: 3000,
     
     // 로그 설정
-    logLevel: 'info', // 'debug', 'info', 'warn', 'error'
+    logLevel: 'debug', // 'debug', 'info', 'warn', 'error' (필터링 디버깅용으로 debug로 변경)
     includeEmojis: true,
     
     // 파일 필터 설정
