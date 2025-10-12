@@ -157,8 +157,8 @@ async function processJsonFiles() {
                 const fileDate = stats.birthtime > stats.mtime ? stats.birthtime : stats.mtime;
                 return fileDate >= filterDate;
             } catch (error) {
-                logger.warn(`파일 정보 확인 실패: ${filename}`);
-                return true; // 오류 시 포함
+                logger.warn(`파일 정보 확인 실패: ${filename} - 필터에서 제외`);
+                return false; // 오류 시 제외 (안전한 처리)
             }
         });
         
