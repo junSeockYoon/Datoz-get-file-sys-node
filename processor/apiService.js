@@ -1,5 +1,5 @@
 const axios = require('axios');
-const config = require('./config');
+const config = require('../config/config');
 
 // API 연결 상태 확인 함수
 async function checkApiHealth(logger) {

@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const config = require('./config');
+const config = require('./config/config');
 const iconv = require('iconv-lite');
-const { sendToAPI, getInitialCompletedOrders, checkApiHealth } = require('./apiService');
-const logger = require('./logger');
-const { processOdLogFiles } = require('./odLogProcessor');
+const { sendToAPI, getInitialCompletedOrders, checkApiHealth } = require('./processor/apiService');
+const logger = require('./logging/logger');
+const { processOdLogFiles } = require('./processor/odLogProcessor');
 
 // 한글 인코딩 변환 함수
 function decodeKoreanFilename(filename) {
@@ -126,8 +126,12 @@ function printReport(data) {
 async function processJsonFiles() {
     const targetDir = config.targetDirectory;
     
+    // 필터링 기준 날짜 (config에서 가져오기)
+    const filterDate = new Date(config.filterDate + 'T00:00:00');
+    
     logger.blank();
     logger.info(`🔍 스캔 디렉토리: ${targetDir}`);
+    logger.info(`📅 필터 조건: ${filterDate.toLocaleDateString('ko-KR')} 이후 생성된 파일만 처리`);
     logger.info(`📝 로그 파일: ${logger.getCurrentLogFile()}`);
     logger.separator('═', 60);
     
@@ -142,14 +146,35 @@ async function processJsonFiles() {
     
     try {
         const items = fs.readdirSync(targetDir);
-        const jsonFiles = items.filter(item => item.endsWith('.json'));
+        
+        // JSON 파일 필터링 + 날짜 필터링
+        const allJsonFiles = items.filter(item => item.endsWith('.json'));
+        const jsonFiles = allJsonFiles.filter(filename => {
+            try {
+                const filePath = path.join(targetDir, filename);
+                const stats = fs.statSync(filePath);
+                // 파일 생성 시간(birthtime) 또는 수정 시간(mtime) 중 더 최근 것 사용
+                const fileDate = stats.birthtime > stats.mtime ? stats.birthtime : stats.mtime;
+                return fileDate >= filterDate;
+            } catch (error) {
+                logger.warn(`파일 정보 확인 실패: ${filename}`);
+                return true; // 오류 시 포함
+            }
+        });
+        
+        if (allJsonFiles.length === 0) {
+            logger.error('JSON 파일을 찾을 수 없습니다.');
+            return;
+        }
         
         if (jsonFiles.length === 0) {
-            logger.error('JSON 파일을 찾을 수 없습니다.');
-                return;
-            }
+            logger.warn(`전체 JSON 파일: ${allJsonFiles.length}개 발견`);
+            logger.error(`📅 ${filterDate.toLocaleDateString('ko-KR')} 이후 생성된 파일이 없습니다.`);
+            return;
+        }
         
-        logger.success(`${jsonFiles.length}개의 JSON 파일 발견`);
+        logger.success(`전체 JSON 파일: ${allJsonFiles.length}개 발견`);
+        logger.success(`📅 필터 통과: ${jsonFiles.length}개 파일 (${allJsonFiles.length - jsonFiles.length}개 제외됨)`);
         logger.blank();
         
         let createdCount = 0;    // 신규 생성

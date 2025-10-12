@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 로그 디렉토리 경로
-const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_DIR = path.join(__dirname, '../logs');
 const ERROR_LOG_DIR = path.join(LOG_DIR, 'errors');
 
 // 로그 디렉토리 생성

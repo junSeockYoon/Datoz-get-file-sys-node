@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const config = require('./config');
+const config = require('../config/config');
 const { sendToAPI, getInitialCompletedOrders } = require('./apiService');
-const logger = require('./logger');
+const logger = require('../logging/logger');
 
 // 날짜 형식 변환 함수 (2019 / 03 / 27)- 09 : 14 : 36 → 한국 시간 문자열)
 function parseOdLogDateTime(dateStr, timeStr) {
@@ -113,8 +113,12 @@ function prepareApiPayload(job) {
 async function processOdLogFiles(limit = null) {
     const targetDir = config.targetDirectory2;
     
+    // 필터링 기준 날짜 (config에서 가져오기)
+    const filterDateStr = config.filterDate.replace(/-/g, ''); // YYYY-MM-DD → YYYYMMDD
+    
     logger.blank();
     logger.info(`🔍 od-log 스캔 디렉토리: ${targetDir}`);
+    logger.info(`📅 필터 조건: ${filterDateStr.slice(0,4)}년 ${filterDateStr.slice(4,6)}월 ${filterDateStr.slice(6,8)}일 이후 파일만 처리`);
     if (limit) {
         logger.info(`📊 처리 제한: 최신 ${limit}개 파일만 처리`);
     }
@@ -134,11 +138,19 @@ async function processOdLogFiles(limit = null) {
         }
         
         const items = fs.readdirSync(targetDir);
-        // 날짜 형식 파일만 필터 (YYYYMMDD)
-        const logFiles = items.filter(item => /^\d{8}$/.test(item));
+        
+        // 날짜 형식 파일만 필터 (YYYYMMDD) + 날짜 필터링
+        const allLogFiles = items.filter(item => /^\d{8}$/.test(item));
+        const logFiles = allLogFiles.filter(item => item >= filterDateStr);
+        
+        if (allLogFiles.length === 0) {
+            logger.error('od-log 파일을 찾을 수 없습니다.');
+            return;
+        }
         
         if (logFiles.length === 0) {
-            logger.error('od-log 파일을 찾을 수 없습니다.');
+            logger.warn(`전체 od-log 파일: ${allLogFiles.length}개 발견`);
+            logger.error(`📅 ${filterDateStr.slice(0,4)}년 ${filterDateStr.slice(4,6)}월 ${filterDateStr.slice(6,8)}일 이후 파일이 없습니다.`);
             return;
         }
         
@@ -148,9 +160,10 @@ async function processOdLogFiles(limit = null) {
         // 개수 제한 적용
         const filesToProcess = limit ? logFiles.slice(0, limit) : logFiles;
         
-        logger.success(`${logFiles.length}개의 od-log 파일 발견`);
+        logger.success(`전체 od-log 파일: ${allLogFiles.length}개 발견`);
+        logger.success(`📅 필터 통과: ${logFiles.length}개 파일 (${allLogFiles.length - logFiles.length}개 제외됨)`);
         if (limit && filesToProcess.length < logFiles.length) {
-            logger.info(`⚡ 처리 대상: 최신 ${filesToProcess.length}개 파일`);
+            logger.info(`⚡ 처리 대상: 최신 ${filesToProcess.length}개 파일 (${logFiles.length - filesToProcess.length}개 생략)`);
         }
         logger.blank();
         

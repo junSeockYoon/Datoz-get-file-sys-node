@@ -13,5 +13,9 @@ module.exports = {
     
     // 로그 설정
     logLevel: 'info', // 'debug', 'info', 'warn', 'error'
-    includeEmojis: true
+    includeEmojis: true,
+    
+    // 파일 필터 설정
+    // 이 날짜 이후에 생성된 파일만 처리합니다
+    filterDate: '2025-10-01', // YYYY-MM-DD 형식
 };
