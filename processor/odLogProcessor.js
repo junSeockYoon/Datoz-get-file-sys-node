@@ -23,8 +23,16 @@ function parseOdLogDateTime(dateStr, timeStr) {
 
 // 작업 시간 계산 (분 단위)
 function calculateWorkTimeInMinutes(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // 문자열을 파싱해서 명시적으로 로컬 시간으로 생성 (UTC 해석 방지)
+    const parseToLocalDate = (dateTimeStr) => {
+        const [datePart, timePart] = dateTimeStr.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute, second] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hour, minute, second);
+    };
+    
+    const start = parseToLocalDate(startDate);
+    const end = parseToLocalDate(endDate);
     const diffMs = end - start;
     return Math.round(diffMs / 1000 / 60); // 밀리초 → 초 → 분
 }
