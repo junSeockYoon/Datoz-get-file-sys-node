@@ -40,8 +40,9 @@ function extractCustomerName(filename) {
     }
 }
 
-// 시간 포맷팅 함수 (콘솔 출력용)
+// 시간 포맷팅 함수 (콘솔 출력용) - 한국 시간 그대로 사용
 function formatDateTime(dateString) {
+    // JSON 파일의 시간은 이미 한국 시간대(KST)로 저장되어 있음
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;

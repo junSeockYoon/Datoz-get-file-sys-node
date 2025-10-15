@@ -17,7 +17,7 @@ function parseOdLogDateTime(dateStr, timeStr) {
     const minute = timeParts[1].padStart(2, '0');
     const second = timeParts[2].padStart(2, '0');
     
-    // 한국 시간 그대로 반환 (yyyy-MM-dd HH:mm:ss 형식)
+    // od-log 파일의 시간은 이미 한국 현지 시간이므로 그대로 사용
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
@@ -413,17 +413,20 @@ function findExistingOdLogOrder(orderer, workStartTime, allOrders, logger = null
         const dbTime = new Date(order.workStartTime);
         const timeDiff = Math.abs(fileTime.getTime() - dbTime.getTime());
         
-        // 1분 이내 또는 정확히 9시간 차이(시간대 문제)면 같은 주문으로 판단
-        const isExactlyOneHour = timeDiff === 3600000;  // 정확히 1시간
+        // 1분 이내 또는 시간대 차이(UTC vs KST)면 같은 주문으로 판단
+        const isExactlyOneHour = timeDiff === 3600000;  // 정확히 1시간 (DST)
         const isExactly9Hours = timeDiff === 32400000;  // 정확히 9시간 (KST-UTC)
-        const isSameTime = timeDiff < 60000 || isExactly9Hours || isExactlyOneHour;
+        const isExactly8Hours = timeDiff === 28800000;  // 정확히 8시간 (KST-UTC, DST 적용시)
+        const isSameTime = timeDiff < 60000 || isExactly9Hours || isExactly8Hours || isExactlyOneHour;
         
         if (logger) {
             logger.info(`   📌 [${index}] 주문자 일치: ${order.orderer}`);
             logger.info(`      DB 시간: ${order.workStartTime}`);
             logger.info(`      시간차: ${timeDiff}ms (${(timeDiff / 1000).toFixed(1)}초)`);
             if (isExactly9Hours) {
-                logger.info(`      → 9시간 차이 (시간대 불일치) ✅`);
+                logger.info(`      → 9시간 차이 (KST-UTC) ✅`);
+            } else if (isExactly8Hours) {
+                logger.info(`      → 8시간 차이 (KST-UTC, DST) ✅`);
             } else if (isExactlyOneHour) {
                 logger.info(`      → 1시간 차이 (DST) ✅`);
             }
