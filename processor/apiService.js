@@ -286,10 +286,13 @@ function findExistingOrder(customerName, workStartTime, allOrders, logger = null
     
     // workStartTime은 한국 시간 문자열 (예: "2025-07-08 16:49:56")
     // DB에서 받은 시간도 한국 시간으로 해석해서 비교
-    const workStartTimeISO = workStartTime.includes('T') 
-        ? workStartTime 
-        : workStartTime.replace(' ', 'T');
-    const fileTime = new Date(workStartTimeISO);
+    const parseToLocalDate = (dateTimeStr) => {
+        const [datePart, timePart] = dateTimeStr.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute, second] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hour, minute, second);
+    };
+    const fileTime = parseToLocalDate(workStartTime);
     
     if (logger) {
         logger.debug(`🔍 중복 체크 시작:`);
@@ -346,18 +349,23 @@ function findExistingOrder(customerName, workStartTime, allOrders, logger = null
 // JSON 파일: "2025-07-08T16:49:56.1314638+09:00" (KST)
 // → API 전송: "2025-07-08 16:49:56" (KST 그대로)
 function formatDateTimeForAPI(dateString) {
-    const date = new Date(dateString);
+    // ISO 문자열에서 시간대 정보를 제거하고 로컬 시간으로 파싱
+    const cleanDateString = dateString.replace(/[+-]\d{2}:\d{2}$/, '').replace('T', ' ');
+    const [datePart, timePart] = cleanDateString.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+    const date = new Date(year, month - 1, day, hours, minutes, seconds);
     
     // 한국 시간(KST)으로 포맷팅 (UTC+9)
     // getUTC*를 사용하지 말고 로컬 시간 그대로 사용
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const yearStr = date.getFullYear();
+    const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(date.getDate()).padStart(2, '0');
+    const hoursStr = String(date.getHours()).padStart(2, '0');
+    const minutesStr = String(date.getMinutes()).padStart(2, '0');
+    const secondsStr = String(date.getSeconds()).padStart(2, '0');
     
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${yearStr}-${monthStr}-${dayStr} ${hoursStr}:${minutesStr}:${secondsStr}`;
 }
 
 // 작업 시간을 분으로 변환 (API 전송용)

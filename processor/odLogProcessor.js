@@ -400,10 +400,14 @@ function findExistingOdLogOrder(orderer, workStartTime, allOrders, logger = null
         return null;
     }
     
-    const workStartTimeISO = workStartTime.includes('T') 
-        ? workStartTime 
-        : workStartTime.replace(' ', 'T');
-    const fileTime = new Date(workStartTimeISO);
+    // 문자열을 파싱해서 명시적으로 로컬 시간으로 생성 (UTC 해석 방지)
+    const parseToLocalDate = (dateTimeStr) => {
+        const [datePart, timePart] = dateTimeStr.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute, second] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hour, minute, second);
+    };
+    const fileTime = parseToLocalDate(workStartTime);
     
     if (logger) {
         logger.info(`   📋 검색 조건:`);
