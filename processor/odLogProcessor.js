@@ -106,12 +106,32 @@ function prepareApiPayload(job) {
     // endTime이 있으면 완료, 없으면 작업중
     const isCompleted = job.endTime !== null;
     const totalWorkTime = isCompleted ? calculateWorkTimeInMinutes(job.startTime, job.endTime) : null;
+
+    // 9시간 보정(운영에서 9시간 빠르게 저장되는 현상 상쇄) → 전송 전 -9시간 적용
+    const shiftHours = (dateTimeStr, hours) => {
+        if (!dateTimeStr) return null;
+        const [datePart, timePart] = dateTimeStr.split(' ');
+        const [y, m, d] = datePart.split('-').map(Number);
+        const [H, M, S] = timePart.split(':').map(Number);
+        const dt = new Date(y, m - 1, d, H, M, S);
+        dt.setHours(dt.getHours() + hours);
+        const yy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        const hh = String(dt.getHours()).padStart(2, '0');
+        const mi = String(dt.getMinutes()).padStart(2, '0');
+        const ss = String(dt.getSeconds()).padStart(2, '0');
+        return `${yy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    };
+
+    const startShifted = shiftHours(job.startTime, -9);
+    const endShifted = isCompleted ? shiftHours(job.endTime, -9) : null;
     
     return {
         equipmentModel: 'CAMeleon CS',
         orderer: job.filename, // 파일명을 주문자로 사용
-        workStartTime: job.startTime,
-        workEndTime: job.endTime,
+        workStartTime: startShifted,
+        workEndTime: endShifted,
         totalWorkTime: totalWorkTime,
         result: isCompleted ? '완료' : '작업중'
     };

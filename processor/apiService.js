@@ -348,22 +348,23 @@ function findExistingOrder(customerName, workStartTime, allOrders, logger = null
 // JSON 파일: "2025-07-08T16:49:56.1314638+09:00" (KST)
 // → API 전송: "2025-07-08 16:49:56" (KST 그대로)
 function formatDateTimeForAPI(dateString) {
-    // ISO 문자열에서 시간대 정보를 제거하고 로컬 시간으로 파싱
+    // ISO 문자열에서 시간대 정보를 제거하고 로컬 시간으로 파싱 → 전송 전 9시간 역보정(-9h)
     const cleanDateString = dateString.replace(/[+-]\d{2}:\d{2}$/, '').replace('T', ' ');
     const [datePart, timePart] = cleanDateString.split(' ');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hours, minutes, seconds] = timePart.split(':').map(Number);
     const date = new Date(year, month - 1, day, hours, minutes, seconds);
-    
-    // 한국 시간(KST)으로 포맷팅 (UTC+9)
-    // getUTC*를 사용하지 말고 로컬 시간 그대로 사용
+
+    // -9시간 보정
+    date.setHours(date.getHours() - 9);
+
     const yearStr = date.getFullYear();
     const monthStr = String(date.getMonth() + 1).padStart(2, '0');
     const dayStr = String(date.getDate()).padStart(2, '0');
     const hoursStr = String(date.getHours()).padStart(2, '0');
     const minutesStr = String(date.getMinutes()).padStart(2, '0');
     const secondsStr = String(date.getSeconds()).padStart(2, '0');
-    
+
     return `${yearStr}-${monthStr}-${dayStr} ${hoursStr}:${minutesStr}:${secondsStr}`;
 }
 
