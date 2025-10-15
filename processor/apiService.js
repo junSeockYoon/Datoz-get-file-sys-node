@@ -298,7 +298,6 @@ function findExistingOrder(customerName, workStartTime, allOrders, logger = null
         logger.debug(`🔍 중복 체크 시작:`);
         logger.debug(`   파일 주문자: ${customerName}`);
         logger.debug(`   파일 시간(문자열): ${workStartTime}`);
-        logger.debug(`   파일 시간(ISO): ${workStartTimeISO}`);
         logger.debug(`   파일 시간(Date): ${fileTime.toString()}`);
         logger.debug(`   파일 시간(타임스탬프): ${fileTime.getTime()}`);
         logger.debug(`   DB 주문 수: ${allOrders.length}건`);

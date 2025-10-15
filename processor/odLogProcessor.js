@@ -413,7 +413,6 @@ function findExistingOdLogOrder(orderer, workStartTime, allOrders, logger = null
         logger.info(`   📋 검색 조건:`);
         logger.info(`      주문자: ${orderer}`);
         logger.info(`      시간: ${workStartTime}`);
-        logger.info(`      시간(ISO): ${workStartTimeISO}`);
         logger.info(`      시간(Date): ${fileTime.toString()}`);
     }
     
