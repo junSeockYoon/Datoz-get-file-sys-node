@@ -355,8 +355,9 @@ function formatDateTimeForAPI(dateString) {
     const [hours, minutes, seconds] = timePart.split(':').map(Number);
     const date = new Date(year, month - 1, day, hours, minutes, seconds);
 
-    // -9시간 보정
-    date.setHours(date.getHours() - 9);
+    // 타임존 보정: config.timezoneShiftHours 적용 (운영 DB=KST면 0 권장)
+    const hoursOffset = (config.timezoneShiftHours || 0);
+    date.setHours(date.getHours() + hoursOffset);
 
     const yearStr = date.getFullYear();
     const monthStr = String(date.getMonth() + 1).padStart(2, '0');

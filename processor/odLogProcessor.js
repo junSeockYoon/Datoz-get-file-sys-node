@@ -107,7 +107,7 @@ function prepareApiPayload(job) {
     const isCompleted = job.endTime !== null;
     const totalWorkTime = isCompleted ? calculateWorkTimeInMinutes(job.startTime, job.endTime) : null;
 
-    // 9시간 보정(운영에서 9시간 빠르게 저장되는 현상 상쇄) → 전송 전 -9시간 적용
+    // 타임존 보정: config.timezoneShiftHours 적용 (운영 DB=KST면 0 권장)
     const shiftHours = (dateTimeStr, hours) => {
         if (!dateTimeStr) return null;
         const [datePart, timePart] = dateTimeStr.split(' ');
@@ -124,8 +124,9 @@ function prepareApiPayload(job) {
         return `${yy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
     };
 
-    const startShifted = shiftHours(job.startTime, -9);
-    const endShifted = isCompleted ? shiftHours(job.endTime, -9) : null;
+    const hoursOffset = (config.timezoneShiftHours || 0);
+    const startShifted = shiftHours(job.startTime, hoursOffset);
+    const endShifted = isCompleted ? shiftHours(job.endTime, hoursOffset) : null;
     
     return {
         equipmentModel: 'CAMeleon CS',
