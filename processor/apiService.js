@@ -15,10 +15,10 @@ async function checkApiHealth(logger) {
     logger.blank();
     
     // 1. LIST API 확인
+    logger.info('📋 LIST API 확인 중...');
+    const listStartTime = Date.now();
+
     try {
-        logger.info('📋 LIST API 확인 중...');
-        const startTime = Date.now();
-        
         const response = await axios.get(config.apiListUrl, {
             timeout: 10000,
             headers: {
@@ -27,7 +27,7 @@ async function checkApiHealth(logger) {
             }
         });
         
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - listStartTime;
         healthCheckResults.listApi = {
             status: 'success',
             responseTime: responseTime,
@@ -39,7 +39,7 @@ async function checkApiHealth(logger) {
         logger.info(`   📊 응답: ${response.status} | 데이터: ${healthCheckResults.listApi.dataCount}건`);
         
     } catch (error) {
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - listStartTime;
         healthCheckResults.listApi = {
             status: 'error',
             responseTime: responseTime,
@@ -55,10 +55,10 @@ async function checkApiHealth(logger) {
     }
     
     // 2. CREATE API 확인 (테스트 요청)
+    logger.info('📝 CREATE API 확인 중...');
+    const createStartTime = Date.now();
+
     try {
-        logger.info('📝 CREATE API 확인 중...');
-        const startTime = Date.now();
-        
         // 테스트용 더미 데이터
         const testPayload = {
             equipmentModel: 'TEST-DWX-52D',
@@ -77,7 +77,7 @@ async function checkApiHealth(logger) {
             }
         });
         
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - createStartTime;
         healthCheckResults.createApi = {
             status: 'success',
             responseTime: responseTime,
@@ -88,7 +88,7 @@ async function checkApiHealth(logger) {
         logger.info(`   📊 응답: ${response.status}`);
         
     } catch (error) {
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - createStartTime;
         healthCheckResults.createApi = {
             status: 'error',
             responseTime: responseTime,
@@ -104,10 +104,10 @@ async function checkApiHealth(logger) {
     }
     
     // 3. UPDATE API 확인 (테스트 요청)
+    logger.info('🔄 UPDATE API 확인 중...');
+    const updateStartTime = Date.now();
+
     try {
-        logger.info('🔄 UPDATE API 확인 중...');
-        const startTime = Date.now();
-        
         // 테스트용 더미 데이터
         const testUpdatePayload = {
             orderer: 'API_HEALTH_CHECK',
@@ -125,7 +125,7 @@ async function checkApiHealth(logger) {
             }
         });
         
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - updateStartTime;
         healthCheckResults.updateApi = {
             status: 'success',
             responseTime: responseTime,
@@ -136,7 +136,7 @@ async function checkApiHealth(logger) {
         logger.info(`   📊 응답: ${response.status}`);
         
     } catch (error) {
-        const responseTime = Date.now() - startTime;
+        const responseTime = Date.now() - updateStartTime;
         healthCheckResults.updateApi = {
             status: 'error',
             responseTime: responseTime,
@@ -187,13 +187,13 @@ async function checkApiHealth(logger) {
 
 // 초기 주문 리스트 가져오기 (GET API 사용)
 async function getInitialCompletedOrders(logger) {
+    logger.info('🔍 전체 주문 목록 조회 중...');
+    logger.info(`   API: ${config.apiListUrl}`);
+    
+    // 응답 시간 측정 시작
+    const startTime = Date.now();
+
     try {
-        logger.info('🔍 전체 주문 목록 조회 중...');
-        logger.info(`   API: ${config.apiListUrl}`);
-        
-        // 응답 시간 측정 시작
-        const startTime = Date.now();
-        
         // GET API로 전체 주문 목록 조회
         const response = await axios.get(config.apiListUrl, {
             timeout: 15000,
