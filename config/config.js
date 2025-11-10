@@ -4,14 +4,14 @@ module.exports = {
     targetDirectory2: 'C:/Users/yoon/Desktop/od-log',
     
     // API 설정
-    // apiListUrl: 'http://43.200.154.128/api/order/external/list',     // 주문 리스트 조회 (GET)
-    // apiUrl: 'http://43.200.154.128/api/order/external/create',       // 주문 생성 (POST)
-    // apiUpdateUrl: 'http://43.200.154.128/api/order/external/update', // 주문 업데이트 (POST)
+    apiListUrl: 'http://43.200.154.128/api/order/external/list',     // 주문 리스트 조회 (GET)
+    apiUrl: 'http://43.200.154.128/api/order/external/create',       // 주문 생성 (POST)
+    apiUpdateUrl: 'http://43.200.154.128/api/order/external/update', // 주문 업데이트 (POST)
     
     // API 설정 - 로컬 테스트용
-    apiListUrl: 'http://localhost:9090/api/order/external/list',     // 주문 리스트 조회 (GET)
-    apiUrl: 'http://localhost:9090/api/order/external/create',       // 주문 생성 (POST)
-    apiUpdateUrl: 'http://localhost:9090/api/order/external/update', // 주문 업데이트 (POST)
+    // apiListUrl: 'http://localhost:9090/api/order/external/list',     // 주문 리스트 조회 (GET)
+    // apiUrl: 'http://localhost:9090/api/order/external/create',       // 주문 생성 (POST)
+    // apiUpdateUrl: 'http://localhost:9090/api/order/external/update', // 주문 업데이트 (POST)
     
     // 서버 포트
     port: 3000,
